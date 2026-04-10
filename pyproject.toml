@@ -1,0 +1,29 @@
+[project]
+name = "cursor-adapter-windows"
+version = "0.1.0"
+description = "Windows Cursor desktop automation exposed as OpenAI-compatible localhost API."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
+  "python-dotenv>=1.0.1",
+  "pywinauto>=0.6.8",
+  "pywin32>=306",
+  "pyperclip>=1.9.0",
+  "pillow>=10.0.0",
+]
+
+[project.scripts]
+cursor-adapter = "cursor_adapter.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
