@@ -76,7 +76,7 @@ curl http://localhost:17325/v1/chat/completions ^
 - `CURSOR_ADAPTER_PORT`：默认 `17325`
 - `CURSOR_WINDOW_TITLE_REGEX`：默认 `.*Cursor.*`
 - `CURSOR_WINDOW_WAIT_SECONDS`：默认 `35`
-- `CURSOR_WINDOW_MIN_RESPONSE_CHARS`：默认 `80`
+- `CURSOR_WINDOW_MIN_RESPONSE_CHARS`：默认 `1`
 - `CURSOR_WINDOW_CLIPBOARD_FALLBACK`：默认 `0`（设为 `1` 启用）
 
 ## 注意事项
