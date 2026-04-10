@@ -9,6 +9,14 @@
   - `POST /v1/chat/completions`
 - 后端实现基于 `pywinauto` + `pywin32` + UIA，对 Cursor 窗口进行自动化输入与抓取回复
 
+## 可使用的场景
+
+- **把“只支持 OpenAI 接口”的工具接到 Cursor**：例如本地脚本、内部服务、评测/对话压测工具，只要会调用 `POST /v1/chat/completions` 就能无改造或少改造接入。
+- **内网/受限网络环境的临时桥接**：当你无法直接访问外部模型服务，但本机可以正常使用 Cursor Chat 时，可用它把调用统一收敛到本机的 OpenAI 兼容地址。
+- **做 PoC / 集成联调**：前端/后端先按 OpenAI 协议打通端到端链路（鉴权、超时、重试、错误处理、日志等），后续再替换为真实模型网关或自建推理服务。
+- **回归与可重复测试**：用固定 prompts（如 `scripts/test_openai_chat.ps1`）在升级 Cursor、调整 UI 布局或修改自动化逻辑后快速验证“能否稳定拿到回复”。
+- **本地代理给多语言客户端**：把 Python/Node/Go 等不同客户端统一指向 `localhost:17325`，降低每个客户端各自适配 Cursor 的成本。
+
 ## 环境要求
 
 - Windows 10/11
