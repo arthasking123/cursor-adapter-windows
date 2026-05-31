@@ -1,7 +1,7 @@
 [project]
 name = "cursor-adapter-windows"
-version = "0.1.0"
-description = "Windows Cursor desktop automation exposed as OpenAI-compatible localhost API."
+version = "0.2.0"
+description = "Windows Cursor desktop automation: OpenAI API (17325) + Ollama mock for OpenClaw (11435)."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -16,7 +16,9 @@ dependencies = [
 ]
 
 [project.scripts]
-cursor-adapter = "cursor_adapter.cli:main"
+cursor-adapter = "cursor_adapter.server.app:main"
+cursor-adapter-openai = "cursor_adapter.server.app:main"
+cursor-adapter-ollama-mock = "cursor_adapter.server.ollama_mock:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

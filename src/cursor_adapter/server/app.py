@@ -96,7 +96,7 @@ def _openai_chat_completion_response(model: str, content: str) -> Dict[str, Any]
     }
 
 
-app = FastAPI(title="Cursor Adapter (Windows) — OpenAI Compatible", version="0.1.0")
+app = FastAPI(title="Cursor Adapter (Windows) — OpenAI Compatible", version="0.2.0")
 
 
 @app.get("/health")
@@ -125,10 +125,17 @@ def chat_completions(req: ChatCompletionsRequest) -> Dict[str, Any]:
     if req.stream:
         raise HTTPException(status_code=400, detail="stream=true is not supported in this adapter yet")
 
-    title_regex = os.getenv("CURSOR_WINDOW_TITLE_REGEX", ".*Cursor.*")
-    wait_seconds = _env_int("CURSOR_WINDOW_WAIT_SECONDS", 35)
+    title_regex = (
+        os.getenv("CURSOR_WINDOW_TITLE_REGEX")
+        or os.getenv("GEN_CURSOR_WINDOW_TITLE_REGEX")
+        or ".*Cursor.*"
+    )
+    wait_seconds = _env_int("CURSOR_WINDOW_WAIT_SECONDS", 0) or _env_int(
+        "GEN_CURSOR_WINDOW_WAIT_SECONDS", 35
+    )
     min_chars = _env_int("CURSOR_WINDOW_MIN_RESPONSE_CHARS", 1)
     clipboard_fallback = _env_bool("CURSOR_WINDOW_CLIPBOARD_FALLBACK", False)
+    use_disk_json = _env_bool("GEN_CURSOR_WINDOW_USE_DISK_JSON", False)
 
     system_prompt, user_content = _messages_to_prompts(req.messages)
 
@@ -138,6 +145,7 @@ def chat_completions(req: ChatCompletionsRequest) -> Dict[str, Any]:
             wait_seconds=wait_seconds,
             min_response_chars=min_chars,
             enable_clipboard_fallback=clipboard_fallback,
+            use_disk_json_response=use_disk_json,
         )
         answer = client.complete(system_prompt=system_prompt, user_content=user_content)
     except Exception as e:

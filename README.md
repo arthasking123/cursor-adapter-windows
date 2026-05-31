@@ -1,13 +1,19 @@
-# Cursor Adapter (Windows) — OpenAI Compatible
+# Cursor Adapter (Windows)
 
-该工程将 **Cursor 桌面端（Windows）** 作为“模型提供方”，通过 UI 自动化把 OpenAI 标准请求转发到 Cursor Chat，并在本机暴露 **OpenAI 兼容 API**（默认 `localhost:17325`）。
+将 **Cursor 桌面端（Windows）** 通过 UI 自动化暴露为本地 HTTP API，支持两种协议：
+
+| 服务 | 默认端口 | 用途 |
+|------|----------|------|
+| **OpenAI 兼容** | `17325` | 通用 `POST /v1/chat/completions` |
+| **Ollama 模拟** | `11435` | OpenClaw `ollama-mock/openclaw-cursor` 等 |
+
+核心实现：`src/cursor_adapter/adapters/cursor_window_client.py`（UIA + 可选磁盘 JSON 回执）。
 
 ## 能做什么
 
-- 提供 OpenAI 兼容接口：
-  - `GET /v1/models`
-  - `POST /v1/chat/completions`
-- 后端实现基于 `pywinauto` + `pywin32` + UIA，对 Cursor 窗口进行自动化输入与抓取回复
+- OpenAI 兼容：`GET /v1/models`、`POST /v1/chat/completions`（FastAPI @ 17325）
+- Ollama 模拟：`GET /api/tags`、`POST /api/chat`、亦支持 `/v1/chat/completions`（@ 11435）
+- 后端：`pywinauto` + `pywin32` + UIA，驱动 Cursor Chat 输入并抓取回复
 
 ## 可使用的场景
 
@@ -33,7 +39,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## 运行（监听 localhost:17325）
+## 运行 OpenAI 服务（17325）
 
 ```powershell
 $env:CURSOR_WINDOW_TITLE_REGEX=".*Cursor.*"
@@ -41,6 +47,18 @@ $env:CURSOR_WINDOW_WAIT_SECONDS="35"
 $env:CURSOR_WINDOW_MIN_RESPONSE_CHARS="1"
 python -m cursor_adapter.server.app
 ```
+
+或：`.\run_server.ps1` / `cursor-adapter-openai`
+
+## 运行 Ollama 模拟（11435，OpenClaw）
+
+```powershell
+$env:OLLAMA_MOCK_BACKEND="cursor"
+$env:CURSOR_WINDOW_WAIT_SECONDS="120"
+python -m cursor_adapter.server.ollama_mock --backend cursor
+```
+
+或：`.\run_ollama_mock.ps1` / `cursor-adapter-ollama-mock --backend cursor`
 
 
 如果你不想安装 editable，也可以用（等价）方式临时指定 `PYTHONPATH`：
@@ -80,12 +98,28 @@ curl http://localhost:17325/v1/chat/completions ^
 
 ## 配置项（环境变量）
 
-- `CURSOR_ADAPTER_HOST`：默认 `127.0.0.1`
-- `CURSOR_ADAPTER_PORT`：默认 `17325`
-- `CURSOR_WINDOW_TITLE_REGEX`：默认 `.*Cursor.*`
-- `CURSOR_WINDOW_WAIT_SECONDS`：默认 `35`
-- `CURSOR_WINDOW_MIN_RESPONSE_CHARS`：默认 `1`
-- `CURSOR_WINDOW_CLIPBOARD_FALLBACK`：默认 `0`（设为 `1` 启用）
+**OpenAI 服务**
+
+- `CURSOR_ADAPTER_HOST` / `CURSOR_ADAPTER_PORT`：默认 `127.0.0.1:17325`
+- `CURSOR_WINDOW_TITLE_REGEX`（或 `GEN_CURSOR_WINDOW_TITLE_REGEX`）
+- `CURSOR_WINDOW_WAIT_SECONDS`（或 `GEN_CURSOR_WINDOW_WAIT_SECONDS`）
+- `CURSOR_WINDOW_MIN_RESPONSE_CHARS`、`CURSOR_WINDOW_CLIPBOARD_FALLBACK`
+- `GEN_CURSOR_WINDOW_USE_DISK_JSON`：默认 `0`（OpenAI 路径建议关闭）
+
+**Ollama 模拟**
+
+- `OLLAMA_MOCK_HOST` / `OLLAMA_MOCK_PORT`：默认 `127.0.0.1:11435`
+- `OLLAMA_MOCK_BACKEND`：`echo` | `cursor`
+- `OLLAMA_MOCK_MODEL`：默认 `openclaw-cursor`
+
+## OpenClaw 集成
+
+```json
+"baseUrl": "http://127.0.0.1:11435",
+"model": "openclaw-cursor"
+```
+
+常驻：`.\run_ollama_mock.ps1` 或 `cursor-adapter-ollama-mock --backend cursor`
 
 ## 注意事项
 
