@@ -24,9 +24,11 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 import os
 
 import pyperclip
+import ctypes
 import win32api
 import win32gui
 import win32con
+import win32process
 from PIL import ImageGrab
 from pywinauto import Application
 from pywinauto.keyboard import send_keys
@@ -246,9 +248,65 @@ def _find_cursor_hwnd_with_retry(title_regex: str, *, timeout_s: float = 8.0) ->
 
 
 def _activate_window(hwnd: int) -> None:
-    # Do not change window size/state, only bring it to foreground.
-    win32gui.SetForegroundWindow(hwnd)
-    time.sleep(0.25)
+    """Bring Cursor to foreground. Windows often blocks SetForegroundWindow from background callers."""
+    if not hwnd or not win32gui.IsWindow(hwnd):
+        return
+    if win32gui.GetForegroundWindow() == hwnd:
+        time.sleep(0.1)
+        return
+
+    if win32gui.IsIconic(hwnd):
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+    def _try_set_foreground() -> bool:
+        try:
+            win32gui.SetForegroundWindow(hwnd)
+            return win32gui.GetForegroundWindow() == hwnd
+        except Exception:
+            return False
+
+    if _try_set_foreground():
+        time.sleep(0.25)
+        return
+
+    # AttachThreadInput: classic workaround when foreground belongs to another thread.
+    fg = win32gui.GetForegroundWindow()
+    fg_tid = win32process.GetWindowThreadProcessId(fg)[0] if fg else 0
+    target_tid = win32process.GetWindowThreadProcessId(hwnd)[0]
+    attached = False
+    if fg_tid and target_tid and fg_tid != target_tid:
+        try:
+            attached = bool(win32process.AttachThreadInput(fg_tid, target_tid, True))
+        except Exception:
+            attached = False
+    try:
+        win32gui.BringWindowToTop(hwnd)
+        if _try_set_foreground():
+            time.sleep(0.25)
+            return
+    finally:
+        if attached:
+            try:
+                win32process.AttachThreadInput(fg_tid, target_tid, False)
+            except Exception:
+                pass
+
+    # Alt synthetic key: briefly satisfies foreground-lock input rules on some builds.
+    try:
+        user32 = ctypes.windll.user32
+        user32.keybd_event(0x12, 0, 0, 0)
+        user32.keybd_event(0x12, 0, 2, 0)
+        if _try_set_foreground():
+            time.sleep(0.25)
+            return
+    except Exception:
+        pass
+
+    logger.warning(
+        "[cursor-window] could not move hwnd=%s to foreground (continuing with set_focus)",
+        hwnd,
+    )
+    time.sleep(0.1)
 
 
 def _safe_descendants(app_window):
